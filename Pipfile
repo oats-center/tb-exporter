@@ -5,6 +5,7 @@ name = "pypi"
 
 [scripts]
 fetch = 'python fetch.py'
+transfer = 'python transfer.py'
 
 [packages]
 requests = "*"
