@@ -32,7 +32,7 @@ def get_data_chunk(url, token, device, key, start, stop, limit):
             }).json()
 
 def post_data_chunk(url, device_token, data):
-    return requests.post(f"{url}/api/v1/{device_token}/telemetry", data = json.dumps(data))
+   return requests.post(f"{url}/api/v1/{device_token}/telemetry", data = json.dumps(data))
 
 parser = argparse.ArgumentParser(description="Fetch DEVICE data from ThingsBoard")
 parser.add_argument('--url', type=str, help='Base URL of source ThingsBoard API')
@@ -45,6 +45,7 @@ parser.add_argument('--key', '-k', type=str, required=True, help='ThingsBoard de
 parser.add_argument('--type', '-t', type=str, required=False, help='Type of dataitem (float, int)')
 parser.add_argument('--start', type=int, default=0, help='Start time as milisecond UNIX timestamp')
 parser.add_argument('--stop', type=int, default=sys.maxsize, help='Stop time as milisecond UNIX timestamp')
+parser.add_argument('--new_start', type=int, default=None, help='Time to make the new series artificially start as milisecond UNIX timestamp')
 
 args = parser.parse_args()
 
@@ -55,8 +56,9 @@ for device in args.device:
     key = args.key
     start = args.start
     stop = args.stop
-    type = lambda x: x
+    new_start = args.new_start if args.new_start != None else args.start
 
+    type = lambda x: x
     if args.type == "int":
         type = int
     elif args.type == "float":
@@ -65,6 +67,8 @@ for device in args.device:
         type = lambda x: True if x.lower() == 'true' else False
 
     print(f"Downloading DEVICE: {device}, KEY: {key}");
+
+    ts_diff = new_start - start
 
     # You have to request data backwards in time ...
     while start < stop:
@@ -77,6 +81,6 @@ for device in args.device:
         stop = data[key][-1]['ts'] - 1
 
         print(f"{key}: Loaded {len(data[key])} points")
-        data = list(map(lambda x: { 'ts': x['ts'], 'values': { key: type(x['value']) } }, data[key]))
+        data = list(map(lambda x: { 'ts': x['ts'] + ts_diff, 'values': { key: type(x['value']) } }, data[key]))
 
         print(post_data_chunk(args.post_url, args.device_token, data))
